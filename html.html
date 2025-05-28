@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blogok</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: chocolate;
+      color: #eee;
+    }
+
+    h1 {
+      color: greenyellow;
+    }
+
+    input,
+    button,
+    select {
+      margin: 5px 0;
+      padding: 2px;
+      font-size: 1rem;
+    }
+
+    .blog {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 6px;
+    }
+
+    .blog span {
+      display: inline-block;
+      width: 200px;
+    }
+
+    .formok {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .form-container {
+      flex: 1;
+      background: orangered;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Blogok</h1>
+
+
+  <div class="formok">
+    <div class="form-container">
+      <h2>Új blog hozzáadása</h2>
+      <input type="text" id="szerzo" placeholder="Szerző" /><br />
+      <input type="text" id="cim" placeholder="Cím" /><br />
+      <input type="text" id="kategoria" placeholder="Kategória" /><br />
+      <input type="text" id="tartalom" placeholder="Tartalom" /><br />
+      <button onclick="ujBlog()">➕ Hozzáadás</button>
+    </div>
+
+    <div class="form-container">
+      <h2>Blog szerkesztése</h2>
+      <input type="hidden" id="szerk-id" />
+      <input type="text" id="szerk-szerzo" placeholder="Szerző" /><br />
+      <input type="text" id="szerk-cim" placeholder="Cím" /><br />
+      <input type="text" id="szerk-kategoria" placeholder="Kategória" /><br />
+      <input type="text" id="szerk-tartalom" placeholder="Tartalom" /><br />
+      <button onclick="mentSzerkesztes()">💾 Mentés</button>
+    </div>
+  </div>
+  <div id="blogok"></div>
+
+  <script>
+    const API = "http://localhost:8080/blog";
+    async function betoltBlogok() {
+      const res = await fetch(API);
+      const blogok = await res.json();
+      const container = document.getElementById("blogok");
+      container.innerHTML = "";
+      blogok.forEach(blog => {
+        const div = document.createElement("div");
+        const modositott_ido_m = new Date(blog.módosítva).toLocaleString("hu-HU", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        const modositott_ido_k = new Date(blog.kelte).toLocaleString("hu-HU", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        div.className = "blog";
+        div.innerHTML = `
+          <span><strong>${blog.szerző}</strong> – ${blog.cím} (${blog.kategória})</span>
+          <span style="width:auto">[${blog.tartalom}]</span>
+          <span style="width:auto">[${modositott_ido_k}]</span>
+          <span style="width:auto">[${modositott_ido_m}]</span>
+          <button height="35px" onclick="torolBlog(${blog.id})">Törlés</button>
+          <button onclick='szerkesztBlog(${JSON.stringify(blog)})'> Szerkesztés</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function ujBlog() {
+      const szerzo = document.getElementById("szerzo").value;
+      const cim = document.getElementById("cim").value;
+      const kategoria = document.getElementById("kategoria").value;
+      const tartalom = document.getElementById("tartalom").value;
+
+      if (!szerzo || !cim || !kategoria || !tartalom) return alert("Tölts ki minden mezőt!");
+
+      await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ szerzo, cim, kategoria, tartalom })
+      });
+
+      betoltBlogok();
+      document.getElementById("szerzo").value = "";
+      document.getElementById("cim").value = "";
+      document.getElementById("kategoria").value = "";
+      document.getElementById("tartalom").value = "";
+
+    }
+
+    async function torolBlog(id) {
+      if (!confirm("Biztosan törlöd?")) return;
+      await fetch(`${API}/${id}`, { method: "DELETE" });
+      betoltBlogok();
+    }
+
+    function szerkesztBlog(blog) {
+      document.getElementById("szerk-id").value = blog.id;
+      document.getElementById("szerk-szerzo").value = blog.szerző;
+      document.getElementById("szerk-cim").value = blog.cím;
+      document.getElementById("szerk-kategoria").value = blog.kategória;
+      document.getElementById("szerk-tartalom").value = blog.tartalom;
+    }
+
+    async function mentSzerkesztes() {
+      const id = document.getElementById("szerk-id").value;
+      const szerzo = document.getElementById("szerk-szerzo").value;
+      const cim = document.getElementById("szerk-cim").value;
+      const kategoria = document.getElementById("szerk-kategoria").value;
+      const tartalom = document.getElementById("szerk-tartalom").value;
+
+      if (!id) return alert("Hiányzik a blog ID!");
+
+      await fetch(`${API}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ szerzo, cim, kategoria, tartalom })
+      });
+
+      betoltBlogok();
+
+
+      document.getElementById("szerk-id").value = "";
+      document.getElementById("szerk-szerzo").value = "";
+      document.getElementById("szerk-cim").value = "";
+      document.getElementById("szerk-kategoria").value = "";
+      document.getElementById("szerk-tartalom").value = "";
+    }
+
+    betoltBlogok();
+  </script>
+</body>
+
+</html>
